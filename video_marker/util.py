@@ -1,5 +1,11 @@
+from __future__ import print_function
+
 import json
 import os
+import sys
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 def init_json(name):
     if os.path.exists(name):

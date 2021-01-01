@@ -44,7 +44,7 @@ class Marker():
             self.x1, self.y1 = x,y
             self.img = self.frame.copy()
             cv2.rectangle(self.img, (self.x1, self.y1), (x, y), self.color, self.thickness)
-            print("LBD", self.x1, self.x2, x, y)
+            print("LBD", self.x1, self.x2)
 
         elif event == cv2.EVENT_MOUSEMOVE:
             if self.LM == True:
@@ -58,13 +58,14 @@ class Marker():
             self.img = self.frame.copy()
             cv2.rectangle(self.img, (self.x1, self.y1), (x, y), self.color, self.thickness)
             self.rect = (min(self.x1, x), min(self.y1, y), max(self.x1, x), max(self.y1, y))
-            print("LBU", self.x1, self.x2, x, y)
+            print("LBU", x, y)
 
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.mark, self.shake = True, False
             self.img = self.frame.copy()
             self.rect = (0, 0, 0, 0)
             self.x1, self.y1, self.x2, self.y2 = 0, 0, 0, 0
+            print("RBU")
 
         elif event == cv2.EVENT_MBUTTONUP:
             self.mark, self.shake = False, False
@@ -102,7 +103,7 @@ class Marker():
 
         start, end = self.get_start_end(marked_points, shake)
 
-        print(start,end)
+        # eprint(start,end)
 
         for ind, (sp, ep) in enumerate(zip(start, end)):
             s_ind = bisect.bisect_left(marked_points, sp)
@@ -139,7 +140,6 @@ class Marker():
 
 
         for ind in json_data:
-            print(ind)
             if str(ind).isdigit():
                 s_id = int(json_data[ind]["shake_id"])
                 bounding_box = json_data[ind]["bounding_box"]
@@ -225,6 +225,7 @@ if __name__ == "__main__":
 
     file_name = "./dataset/handshake.avi"
     file_name = file_name.replace("\\", "/")
+    vid_name = file_name.split("/")[-1]
 
     output_dir = "/".join(i for i in file_name.split("/")[:-1])
     output_name = output_dir + "/%s5.json"%(file_name.split("/")[-1].split(".")[0])
@@ -247,7 +248,11 @@ if __name__ == "__main__":
         # Write to json
         init_json(output_name)
 
-        json_data = {"frames" : len(mark)}
+        json_data = {
+            "frames" : len(mark),
+            "file_name" : vid_name
+        }
+
         for ind in bounding_box:
             json_data[ind] = {"shake_id": ind, "bounding_box": bounding_box[ind]}
 
@@ -264,7 +269,7 @@ if __name__ == "__main__":
         points = marker.BB_to_points(json_data)
 
         print("[n_shakes, n_frames, 4] : ", points.shape)
-        print(points)
+        # eprint(points)
 
         marker.marked_video(file_name, points)
 
