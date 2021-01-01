@@ -61,15 +61,13 @@ class Marker():
             print("LBU", self.x1, self.x2, x, y)
 
         elif event == cv2.EVENT_RBUTTONDOWN:
-            self.mark = True
-            self.shake = False
+            self.mark, self.shake = True, False
             self.img = self.frame.copy()
             self.rect = (0, 0, 0, 0)
             self.x1, self.y1, self.x2, self.y2 = 0, 0, 0, 0
 
         elif event == cv2.EVENT_MBUTTONUP:
-            self.mark = False
-            self.shake = False
+            self.mark, self.shake = False, False
             self.img = self.frame.copy()
             self.rect = (0, 0, 0, 0)
             self.x1, self.y1, self.x2, self.y2 = 0, 0, 0, 0
@@ -87,8 +85,12 @@ class Marker():
                 stat = 1
                 start.append(p)
             elif shake[p] == 0 and stat == 1:
+                stat = 0
                 marked_points[m] = p-1
                 end.append(p-1)
+
+        if len(start) > len(end):
+            end.append(len(marked_points)-1)
 
         return start, end
 
@@ -99,6 +101,8 @@ class Marker():
         marked_points = np.where(mark == 1)[0]
 
         start, end = self.get_start_end(marked_points, shake)
+
+        print(start,end)
 
         for ind, (sp, ep) in enumerate(zip(start, end)):
             s_ind = bisect.bisect_left(marked_points, sp)
@@ -128,22 +132,22 @@ class Marker():
 
         n_person = 0
         for ind in json_data:
-            print(ind, type(ind))
             if str(ind).isdigit():
                 n_person += 1
 
         points = np.zeros((n_person, json_data["frames"], 4))
 
-        for ind in json_data:
-            if str(ind).isdigit():
-                bounding_box = json_data[ind]["bounding_box"]
-                p_id = json_data[ind]["person_id"]
 
-                for bb in bounding_box:
-                    point_ind = bounding_box[bb]["rectangles"]
-                    mp_ind = bounding_box[bb]["marked_points"]
-                    sp, ep = mp_ind[0], mp_ind[-1]
-                    points[p_id, sp:ep+1, :] = np.array(point_ind)
+        for ind in json_data:
+            print(ind)
+            if str(ind).isdigit():
+                s_id = int(json_data[ind]["shake_id"])
+                bounding_box = json_data[ind]["bounding_box"]
+
+                point_ind = bounding_box["rectangles"]
+                mp_ind = bounding_box["marked_points"]
+                sp, ep = mp_ind[0], mp_ind[-1]
+                points[s_id, sp:ep+1, :] = np.array(point_ind)
 
         return points
 
@@ -186,22 +190,21 @@ class Marker():
         return points, mark, shake
 
 
-    def marked_video(self, file_name, points_):
-        points_ = points_.astype(int)
+    def marked_video(self, file_name, points):
+        points_ = points.astype(int)
+        n_shakes, n_frames,  _ = points_.shape
 
         cv2.namedWindow('frame')
 
         cap = cv2.VideoCapture(file_name)
-        ind = 0
 
-        while (1):
+        for ind in range(n_frames):
             ret, frame = cap.read()
             if ret == True:
-                rect = points_[ind, :]
-                print(rect)
-                ind += 1
                 self.img = np.array(frame, copy=True)
-                cv2.rectangle(self.img, (rect[0], rect[1]), (rect[2], rect[3]), self.color, self.thickness)
+                for s_id in range(n_shakes):
+                    rect = points_[s_id, ind, :]
+                    cv2.rectangle(self.img, (rect[0], rect[1]), (rect[2], rect[3]), self.color, self.thickness)
                 cv2.imshow('frame', self.img)
                 # print(rect)
 
@@ -216,14 +219,15 @@ class Marker():
 
 if __name__ == "__main__":
 
-    MARK = True
-    TEST = False
+    MARK = False
+    TEST = True
+    DEBUG = True
 
     file_name = "./dataset/handshake.avi"
     file_name = file_name.replace("\\", "/")
 
     output_dir = "/".join(i for i in file_name.split("/")[:-1])
-    output_name = output_dir + "/%s3.json"%(file_name.split("/")[-1].split(".")[0])
+    output_name = output_dir + "/%s5.json"%(file_name.split("/")[-1].split(".")[0])
 
     marker = Marker()
 
@@ -232,6 +236,11 @@ if __name__ == "__main__":
         # run is to mark the points
         points, mark, shake = marker.run(file_name)
 
+        if DEBUG:
+            np.save("points.npy", points)
+            np.save("mark.npy", mark)
+            np.save("shake.npy", shake)
+
         # post process returns the bounding box from the marked points
         bounding_box = marker.post_process(points, mark, shake)
 
@@ -239,17 +248,25 @@ if __name__ == "__main__":
         init_json(output_name)
 
         json_data = {"frames" : len(mark)}
-        json_data[0] = {"person_id": 0, "bounding_box": bounding_box}
+        for ind in bounding_box:
+            json_data[ind] = {"shake_id": ind, "bounding_box": bounding_box[ind]}
 
         update_json(json_data, output_name)
 
-    json_data = read_json(output_name)
 
-    points_= marker.BB_to_points(json_data)
-    print("[n_person, n_frames, 4] : ", points_.shape)
-    print(points_[0, :, :])
 
-    marker.marked_video(file_name, points_[0, :, :])
+    if TEST:
+
+        """ To test marked points """
+        json_data = read_json(output_name)
+
+        n_frames = json_data["frames"]
+        points = marker.BB_to_points(json_data)
+
+        print("[n_shakes, n_frames, 4] : ", points.shape)
+        print(points)
+
+        marker.marked_video(file_name, points)
 
 
 
