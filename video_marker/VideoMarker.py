@@ -223,7 +223,7 @@ if __name__ == "__main__":
     TEST = True
     DEBUG = True
 
-    file_name = "./dataset/handshake.avi"
+    file_name = "/Users/jhassan/Documents/PycharmProjects/GaitAnalysis/depth_estimation/videos/ut-interaction_set1/seq1.avi"
     file_name = file_name.replace("\\", "/")
     vid_name = file_name.split("/")[-1]
 
