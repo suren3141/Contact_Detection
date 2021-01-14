@@ -216,19 +216,18 @@ class Marker():
                 break
 
 
-
 if __name__ == "__main__":
 
     MARK = False
     TEST = True
     DEBUG = True
 
-    file_name = "./dataset/handshake.avi"
+    file_name = "/Users/jhassan/Documents/PycharmProjects/GaitAnalysis/depth_estimation/videos/ut-interaction_set1/seq2.avi"
     file_name = file_name.replace("\\", "/")
     vid_name = file_name.split("/")[-1]
 
     output_dir = "/".join(i for i in file_name.split("/")[:-1])
-    output_name = output_dir + "/%s5.json"%(file_name.split("/")[-1].split(".")[0])
+    output_name = output_dir + "/%s.json"%(file_name.split("/")[-1].split(".")[0])
 
     marker = Marker()
 
